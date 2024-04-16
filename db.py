@@ -62,6 +62,7 @@ async def init_db():
     await init_mediacrawler_db()
     utils.logger.info("[init_db] end init mediacrawler db connect object")
 
+
 async def close():
     """
     关闭连接池

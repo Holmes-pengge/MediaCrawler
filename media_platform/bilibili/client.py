@@ -43,7 +43,7 @@ class BilibiliClient(AbstractApiClient):
             )
         data: Dict = response.json()
         if data.get("code") != 0:
-            raise DataFetchError(data.get("message", "unkonw error"))
+            raise DataFetchError(data.get("message", "unknown error"))
         else:
             return data.get("data", {})
 
@@ -85,6 +85,7 @@ class BilibiliClient(AbstractApiClient):
         if isinstance(params, dict):
             final_uri = (f"{uri}?"
                          f"{urlencode(params)}")
+        utils.logger.info(f"[BilibiliClient.get] request target_url={self._host}{final_uri}, headers={self.headers}")
         return await self.request(method="GET", url=f"{self._host}{final_uri}", headers=self.headers)
 
     async def post(self, uri: str, data: dict) -> Dict:
@@ -151,6 +152,45 @@ class BilibiliClient(AbstractApiClient):
             params.update({"bvid": bvid})
         return await self.get(uri, params, enable_params_sign=False)
 
+    async def get_video_list_by_user_id(self, user_id: Union[str, None] = None, page_number: int = 1) -> Tuple[Dict, bool, int]:
+        """
+        :param user_id: user_id
+        :param page_number: page_number
+        :return:
+        """
+        if not user_id:
+            raise ValueError("请提供 user_id  参数")
+
+        uri = "/x/space/wbi/arc/search"
+        params = dict()
+
+        params.update({
+            "mid": user_id,
+            "ps": 30,  # page_size
+            # "tid": 0,
+            "pn": page_number,  # page_number
+            # "keyword": "",
+            # "order": "pubdate",
+            # "platform": "web",
+            # "web_location": "1550101",  # TODO: 未知
+            # "order_avoided": "true",
+            # "dm_img_list": "\[\]",
+            # "dm_img_str": "V2ViR0wgMS4wIChPcGVuR0wgRVMgMi4wIENocm9taXVtKQ",
+            # "dm_cover_img_str": "QU5HTEUgKEFNRCwgUmFkZW9uIDUyMCAoMHgwMDAwNjYxMSkgRGlyZWN0M0QxMSB2c181XzAgcHNfNV8wLCBEM0QxMSlHb29nbGUgSW5jLiAoQU1EKQ",
+            # "dm_img_inter": "%7B%22ds%22:\[%7B%22t%22:2,%22c%22:%22Y2xlYXJmaXggZy1zZWFyY2ggc2VhcmNoLWNvbnRhaW5lcg%22,%22p%22:\[2321,43,277\],%22s%22:\[388,850,1192\]%7D,%7B%22t%22:2,%22c%22:%22d3JhcHBlcg%22,%22p%22:\[1568,100,1086\],%22s%22:\[173,4698,4126\]%7D\],%22wh%22:\[5959,6868,99\],%22of%22:\[119,238,119\]%7D",
+            # "w_rid": "0fd04feeda7a263e3102682d1b17c03a",
+            # "wts": "1713259106",
+        })
+        response: Dict = await self.get(uri, params, enable_params_sign=True)
+        count = response.get("page", {}).get("count", 0)
+        pn = response.get("page", {}).get("pn", 1)
+        ps = response.get("page", {}).get("ps", 30)
+        if pn * ps < count:
+            has_next = True
+        else:
+            has_next = False
+        return response, has_next, pn
+
     async def get_video_comments(self,
                                  video_id: str,
                                  order_mode: CommentOrderType = CommentOrderType.DEFAULT,
@@ -185,13 +225,13 @@ class BilibiliClient(AbstractApiClient):
 
         result = []
         is_end = False
-        next_page =0
+        next_page = 0
         while not is_end:
             comments_res = await self.get_video_comments(video_id, CommentOrderType.DEFAULT, next_page)
-            curson_info: Dict = comments_res.get("cursor")
+            cursor_info: Dict = comments_res.get("cursor")
             comment_list: List[Dict] = comments_res.get("replies", [])
-            is_end = curson_info.get("is_end")
-            next_page = curson_info.get("next")
+            is_end = cursor_info.get("is_end")
+            next_page = cursor_info.get("next")
             if callback:  # 如果有回调函数，就执行回调函数
                 await callback(video_id, comment_list)
             await asyncio.sleep(crawl_interval)

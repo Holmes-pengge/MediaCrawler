@@ -1,4 +1,4 @@
-    # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # @Author  : relakkes@gmail.com
 # @Time    : 2023/12/2 23:26
 # @Desc    : bilibili 请求参数签名
@@ -66,5 +66,5 @@ if __name__ == '__main__':
         value = kvalues[1]
         _req_data[key] = value
     print("pre req_data", _req_data)
-    _req_data = BilibiliSign(img_key=_img_key, sub_key=_sub_key).sign(req_data={"aid":170001})
+    _req_data = BilibiliSign(img_key=_img_key, sub_key=_sub_key).sign(req_data={"aid": 170001})
     print(_req_data)

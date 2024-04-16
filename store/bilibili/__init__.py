@@ -36,20 +36,50 @@ async def update_bilibili_video(video_item: Dict):
         "video_type": "video",
         "title": video_item_view.get("title", "")[:500],
         "desc": video_item_view.get("desc", "")[:500],
-        "create_time": video_item_view.get("pubdate"),
+        "pubdate": video_item_view.get("pubdate"),
         "user_id": str(video_user_info.get("mid")),
         "nickname": video_user_info.get("name"),
         "avatar": video_user_info.get("face", ""),
         "liked_count": str(video_item_stat.get("like", "")),
+        "favorite_count": str(video_item_stat.get("favorite", "")),  # 收藏
+        "coin_count": str(video_item_stat.get("coin", "")),  # 投币
+        "share_count": str(video_item_stat.get("share", "")),  # 转发
         "video_play_count": str(video_item_stat.get("view", "")),
-        "video_danmaku": str(video_item_stat.get("danmaku", "")),
-        "video_comment": str(video_item_stat.get("reply", "")),
+        "video_danmaku_count": str(video_item_stat.get("danmaku", "")),
+        "video_comment_count": str(video_item_stat.get("reply", "")),
         "last_modify_ts": utils.get_current_timestamp(),
         "video_url": f"https://www.bilibili.com/video/av{video_id}",
         "video_cover_url": video_item_view.get("pic", ""),
     }
     utils.logger.info(
         f"[store.bilibili.update_bilibili_video] bilibili video id:{video_id}, title:{save_content_item.get('title')}")
+    await BiliStoreFactory.create_store().store_content(content_item=save_content_item)
+
+
+async def update_bilibili_video_by_user_id(video_item: Dict):
+    video_id = str(video_item.get("aid"))
+    save_content_item = {
+        "video_id": video_id,
+        "video_type": "video",
+        "title": video_item.get("title", "")[:500],
+        "desc": video_item.get("desc", "")[:500],
+        "pubdate": 0,
+        "user_id": str(video_item.get("mid")),
+        "nickname": video_item.get("author"),
+        "avatar": "",
+        "liked_count": 0,
+        "favorite_count": 0,  # 收藏
+        "coin_count": 0,  # 投币
+        "share_count": 0,  # 转发
+        "video_play_count": 0,
+        "video_danmaku_count": 0,
+        "video_comment_count": 0,
+        "last_modify_ts": utils.get_current_timestamp(),
+        "video_url": f"https://www.bilibili.com/video/av{video_id}",
+        "video_cover_url": video_item.get("pic", ""),
+    }
+    utils.logger.info(
+        f"[store.bilibili.update_bilibili_video_by_user_id] bilibili video id:{video_id}, title:{save_content_item.get('title')}")
     await BiliStoreFactory.create_store().store_content(content_item=save_content_item)
 
 

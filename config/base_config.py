@@ -4,7 +4,7 @@ KEYWORDS = "python,golang"
 LOGIN_TYPE = "qrcode"  # qrcode or phone or cookie
 COOKIES = ""
 SORT_TYPE = "popularity_descending"  # 具体值参见media_platform.xxx.field下的枚举值，展示只支持小红书
-CRAWLER_TYPE = "search"  # 爬取类型，search(关键词搜索) | detail(帖子详情)| creator(创作者主页数据)
+CRAWLER_TYPE = "creator"  # 爬取类型，search(关键词搜索) | detail(帖子详情)| creator(创作者主页数据)
 
 # 是否开启 IP 代理
 ENABLE_IP_PROXY = False
@@ -22,7 +22,7 @@ HEADLESS = True
 SAVE_LOGIN_STATE = True
 
 # 数据保存类型选项配置,支持三种类型：csv、db、json
-SAVE_DATA_OPTION = "json"  # csv or db or json
+SAVE_DATA_OPTION = "db"  # csv or db or json
 
 # 用户浏览器缓存的浏览器文件配置
 USER_DATA_DIR = "%s_user_data_dir"  # %s will be replaced by platform name
@@ -67,11 +67,18 @@ KS_SPECIFIED_ID_LIST = [
     "3x6zz972bchmvqe"
 ]
 
+# 指定B站平台需要爬取的user_id列表
+BILI_SPECIFIED_USER_ID_LIST = [
+    "49746395",
+    "57863910",
+    # ........................
+]
+
 # 指定B站平台需要爬取的视频bvid列表
 BILI_SPECIFIED_ID_LIST = [
     "BV1d54y1g7db",
-    "BV1Sz4y1U77N",
-    "BV14Q4y1n7jz",
+    # "BV1Sz4y1U77N",
+    # "BV14Q4y1n7jz",
     # ........................
 ]
 
