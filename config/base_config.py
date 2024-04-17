@@ -1,5 +1,6 @@
 # 基础配置
-from typing import List
+
+IS_PRODUCTION = True
 
 PLATFORM = "xhs"
 KEYWORDS = "python,golang"
@@ -75,12 +76,12 @@ BILI_SPECIFIED_USER_ID_LIST = [
     "57863910",
     # ........................
 ]
-# BILI_SPECIFIED_USER_ID_LIST: List = fetch_db()
-# 指定B站平台需要爬取的视频bvid列表
+
+# 指定B站平台需要爬取的视频 aid 列表
 BILI_SPECIFIED_ID_LIST = [
-    "BV1d54y1g7db",
-    # "BV1Sz4y1U77N",
-    # "BV14Q4y1n7jz",
+    "1000927441",
+    # "1050796523",
+    # "1050800304",
     # ........................
 ]
 

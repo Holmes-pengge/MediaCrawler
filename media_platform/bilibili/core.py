@@ -8,7 +8,7 @@ import json
 import os
 import random
 from asyncio import Task
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 
 from playwright.async_api import (BrowserContext, BrowserType, Page,
                                   async_playwright)
@@ -18,7 +18,8 @@ from base.base_crawler import AbstractCrawler
 from proxy.proxy_ip_pool import IpInfoModel, create_ip_pool
 from store import bilibili as bilibili_store
 from tools import utils
-from var import crawler_type_var
+from var import crawler_type_var, media_crawler_db_var
+from db import AsyncMysqlDB
 
 from .client import BilibiliClient
 from .exception import DataFetchError
@@ -85,13 +86,19 @@ class BilibiliCrawler(AbstractCrawler):
                 await self.search()
             elif self.crawler_type == "detail":
                 # Get the information and comments of the specified post
-                await self.get_specified_videos()
+                pass
             elif self.crawler_type == "user":
                 # 根据用户id, 爬取用户信息
-                pass
+                await self.get_userinfo_by_user_id()
             elif self.crawler_type == "video_list_by_user_id":
-                # 根据用户id, 爬取用户作品信息
+                # 根据用户id, 爬取用户作品列表
                 await self.get_video_list_by_user_id()
+            elif self.crawler_type == "video_detail_by_video_id":
+                # 根据作品id, 爬取用户作品详情
+                await self.get_specified_videos()
+            elif self.crawler_type == "comment":
+                # 根据作品id, 爬取用户作品comment
+                await self.get_video_comments()
             else:
                 utils.logger.warn("[BilibiliCrawler.start] Bilibili Crawler unsupported crawler type")
             utils.logger.info("[BilibiliCrawler.start] Bilibili Crawler finished ...")
@@ -138,15 +145,26 @@ class BilibiliCrawler(AbstractCrawler):
                 page += 1
                 await self.batch_get_video_comments(video_id_list)
 
+    async def get_video_comments(self):
+        if config.IS_PRODUCTION:
+            async_db_conn: AsyncMysqlDB = media_crawler_db_var.get()
+            result_row: List[Dict[str, Any]] = await async_db_conn.query("SELECT video_id FROM tb_bilibili_video;")
+            print(len(result_row))
+            task_ls = [item['video_id'] for item in result_row]
+        else:
+            task_ls = config.BILI_SPECIFIED_ID_LIST
+
+        await self.batch_get_video_comments(task_ls)
+
     async def batch_get_video_comments(self, video_id_list: List[str]):
         """
         batch get video comments
         :param video_id_list:
         :return:
         """
-        if not config.ENABLE_GET_COMMENTS:
-            utils.logger.info(f"[BilibiliCrawler.batch_get_note_comments] Crawling comment mode is not enabled")
-            return
+        # if not config.ENABLE_GET_COMMENTS:
+        #     utils.logger.info(f"[BilibiliCrawler.batch_get_note_comments] Crawling comment mode is not enabled")
+        #     return
 
         utils.logger.info(f"[BilibiliCrawler.batch_get_video_comments] video ids:{video_id_list}")
         semaphore = asyncio.Semaphore(config.MAX_CONCURRENCY_NUM)
@@ -183,25 +201,23 @@ class BilibiliCrawler(AbstractCrawler):
         :return:
         """
         semaphore = asyncio.Semaphore(config.MAX_CONCURRENCY_NUM)
+
+        if config.IS_PRODUCTION:
+            async_db_conn: AsyncMysqlDB = media_crawler_db_var.get()
+            result_row: List[Dict[str, Any]] = await async_db_conn.query("SELECT video_id FROM tb_bilibili_video;")
+            task_ls = [item['video_id'] for item in result_row]
+        else:
+            task_ls = config.BILI_SPECIFIED_ID_LIST
+
         task_list = [
-            self.get_video_info_task(aid=0, bvid=video_id, semaphore=semaphore) for video_id in
-            config.BILI_SPECIFIED_ID_LIST
+            self.get_video_info_task(aid=video_id, bvid="", semaphore=semaphore) for video_id in
+            task_ls
         ]
         video_details = await asyncio.gather(*task_list)
-        video_aids_list = []
         for video_detail in video_details:
             if video_detail is not None:
-                video_item_view: Dict = video_detail.get("View")
-                video_aid: str = video_item_view.get("aid")
-                #  TODO: 去掉
-                from datetime import datetime
-                with open(f'{video_aid}_{datetime.now().strftime("%Y%m%d%H%M%S")}.json', 'w', encoding='utf-8') as f:
-                    json.dump(video_detail, f, ensure_ascii=False, indent=4)
-
-                if video_aid:
-                    video_aids_list.append(video_aid)
+                video_detail['status'] = 1
                 await bilibili_store.update_bilibili_video(video_detail)
-        await self.batch_get_video_comments(video_aids_list)
 
     async def get_video_info_task(self, aid: int, bvid: str, semaphore: asyncio.Semaphore) -> Optional[Dict]:
         """
@@ -259,12 +275,25 @@ class BilibiliCrawler(AbstractCrawler):
         """输入: user_id； 输出: video_id_list
         :return:
         """
+        if config.IS_PRODUCTION:
+            async_db_conn: AsyncMysqlDB = media_crawler_db_var.get()
+            result_row: List[Dict[str, Any]] = await async_db_conn.query("SELECT user_id FROM tb_bilibili_user;")
+            task_ls = [item['user_id'] for item in result_row]
+        else:
+            task_ls = config.BILI_SPECIFIED_USER_ID_LIST
+
         semaphore = asyncio.Semaphore(config.MAX_CONCURRENCY_NUM)
 
-        for user_id in config.BILI_SPECIFIED_USER_ID_LIST:
+        for user_id in task_ls:
             async for gen in self.get_video_list_by_user_id_task(user_id=user_id, semaphore=semaphore):
                 for video_item in gen['list']['vlist']:
                     await bilibili_store.update_bilibili_video_by_user_id(video_item)
+
+    async def get_userinfo_by_user_id(self):
+        pass
+        # async_db_conn: AsyncMysqlDB = media_crawler_db_var.get()
+        # result_row: List[Dict[str, Any]] = await async_db_conn.query("SELECT user_id FROM tb_bilibili_user;")
+        # return result_row
 
     async def create_bilibili_client(self, httpx_proxy: Optional[str]) -> BilibiliClient:
         """Create xhs client"""

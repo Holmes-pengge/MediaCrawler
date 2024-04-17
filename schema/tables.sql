@@ -7,6 +7,7 @@ CREATE TABLE `tb_bilibili_user`
     `id`             int         NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `user_id`        varchar(64) NOT NULL COMMENT '用户ID',
     `nickname`       varchar(64)  DEFAULT NULL COMMENT '用户昵称',
+    `index_url`      varchar(255) DEFAULT NULL COMMENT '用户首页地址',
     `avatar`         varchar(255) DEFAULT NULL COMMENT '用户头像地址',
     `add_ts`         bigint      NOT NULL COMMENT '记录添加时间戳',
     `last_modify_ts` bigint      NOT NULL COMMENT '记录最后修改时间戳',
@@ -14,11 +15,15 @@ CREATE TABLE `tb_bilibili_user`
     `fans_count`     varchar(16)  DEFAULT NULL COMMENT '粉丝数',
     `liked_count`    varchar(16)  DEFAULT NULL COMMENT '获赞数',
     `play_count`     varchar(16)  DEFAULT NULL COMMENT '播放数',
-    PRIMARY KEY (`id`)
+    `status`         int          DEFAULT 0 NULL COMMENT '任务状态',
+    `created_at`     timestamp    DEFAULT CURRENT_TIMESTAMP NULL COMMENT '最初入库时间',
+    `updated_at`     timestamp    DEFAULT CURRENT_TIMESTAMP NULL on update CURRENT_TIMESTAMP COMMENT '最后入库时间',
+    PRIMARY KEY (`id`),
+    constraint user_id
+        unique (user_id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='B站博主';
-
 -- ----------------------------
 -- Table structure for tb_bilibili_video
 -- ----------------------------
@@ -54,10 +59,10 @@ CREATE TABLE `tb_bilibili_video`
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='B站视频';
 
 -- ----------------------------
--- Table structure for bilibili_video_comment
+-- Table structure for tb_bilibili_video_comment
 -- ----------------------------
-DROP TABLE IF EXISTS `bilibili_video_comment`;
-CREATE TABLE `bilibili_video_comment`
+DROP TABLE IF EXISTS `tb_bilibili_video_comment`;
+CREATE TABLE `tb_bilibili_video_comment`
 (
     `id`                int         NOT NULL AUTO_INCREMENT COMMENT '自增ID',
     `user_id`           varchar(64)  DEFAULT NULL COMMENT '用户ID',
@@ -68,6 +73,7 @@ CREATE TABLE `bilibili_video_comment`
     `comment_id`        varchar(64) NOT NULL COMMENT '评论ID',
     `video_id`          varchar(64) NOT NULL COMMENT '视频ID',
     `content`           longtext COMMENT '评论内容',
+    `status`            int          DEFAULT 0 NULL COMMENT '任务状态',
     `create_time`       bigint      NOT NULL COMMENT '评论时间戳',
     `sub_comment_count` varchar(16) NOT NULL COMMENT '评论回复数',
     PRIMARY KEY (`id`),

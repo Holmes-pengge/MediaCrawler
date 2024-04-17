@@ -152,7 +152,11 @@ class BilibiliClient(AbstractApiClient):
             params.update({"bvid": bvid})
         return await self.get(uri, params, enable_params_sign=False)
 
-    async def get_video_list_by_user_id(self, user_id: Union[str, None] = None, page_number: int = 1) -> Tuple[Dict, bool, int]:
+    async def get_video_list_by_user_id(
+            self,
+            user_id: Union[str, None] = None,
+            page_number: int = 1
+    ) -> Tuple[Dict, bool, int]:
         """
         :param user_id: user_id
         :param page_number: page_number
@@ -180,15 +184,16 @@ class BilibiliClient(AbstractApiClient):
             has_next = False
         return response, has_next, pn
 
-    async def get_video_comments(self,
-                                 video_id: str,
-                                 order_mode: CommentOrderType = CommentOrderType.DEFAULT,
-                                 next: int = 0
-                                 ) -> Dict:
+    async def get_video_comments(
+            self,
+            video_id: str,
+            order_mode: CommentOrderType = CommentOrderType.DEFAULT,
+            next_page: int = 0
+    ) -> Dict:
         """get video comments
         :param video_id: 视频 ID
         :param order_mode: 排序方式
-        :param next: 评论页选择
+        :param next_page: 评论页选择
         :return:
         """
         uri = "/x/v2/reply/wbi/main"
@@ -197,12 +202,17 @@ class BilibiliClient(AbstractApiClient):
             "mode": order_mode.value,
             "type": 1,
             "ps": 20,
-            "next": next
+            "next": next_page
         }
         return await self.get(uri, post_data)
 
-    async def get_video_all_comments(self, video_id: str, crawl_interval: float = 1.0, is_fetch_sub_comments=False,
-                                     callback: Optional[Callable] = None, ):
+    async def get_video_all_comments(
+            self,
+            video_id: str,
+            crawl_interval: float = 1.0,
+            is_fetch_sub_comments=False,
+            callback: Optional[Callable] = None
+    ):
         """
         get video all comments include sub comments
         :param video_id:

@@ -36,8 +36,8 @@ async def main():
                         choices=["xhs", "dy", "ks", "bili", "wb"], default=config.PLATFORM)
     parser.add_argument('--lt', type=str, help='Login type (qrcode | phone | cookie)',
                         choices=["qrcode", "phone", "cookie"], default=config.LOGIN_TYPE)
-    parser.add_argument('--type', type=str, help='crawler type (search | detail | creator | video_list_by_user_id)',
-                        choices=["search", "detail", "creator", "video_list_by_user_id"], default=config.CRAWLER_TYPE)
+    parser.add_argument('--type', type=str, help='crawler type (search | detail | creator | user | video_list_by_user_id | video_detail_by_video_id | comment)',
+                        choices=["search", "detail", "creator", "user", "video_list_by_user_id", "video_detail_by_video_id", "comment"], default=config.CRAWLER_TYPE)
     parser.add_argument('--start', type=int, help='crawler type (number of start page)',
                         default=config.START_PAGE)
     parser.add_argument('--keywords', type=str, help='crawler type (please input keywords)',

@@ -69,16 +69,25 @@
 ### 运行爬虫程序
 
    ```shell
-   # 从配置文件中读取关键词搜索相关的帖子并爬取帖子信息与评论
-   python main.py --platform xhs --lt qrcode --type search
+   # B站 根据 user_id 获取 用户详情 (暂未完成)
+   python main.py --platform bili --lt qrcode --type user
    
-   # 从配置文件中读取指定的帖子ID列表获取指定帖子的信息与评论信息
-   python main.py --platform xhs --lt qrcode --type detail
+    # B站 根据 user_id 获取用户作品列表
+    python main.py --platform bili --lt qrcode --type video_list_by_user_id
   
-   # 打开对应APP扫二维码登录
+    # B站 根据 video_id 获取作品详情
+    python main.py --platform bili --lt qrcode --type video_detail_by_video_id
+  
+  # B站 根据 作品ID 获取相应评论
+  python main.py --platform bili --lt qrcode --type comment
+  
      
    # 其他平台爬虫使用示例，执行下面的命令查看
    python main.py --help    
+   
+
+   
+   
    ```
 
 
