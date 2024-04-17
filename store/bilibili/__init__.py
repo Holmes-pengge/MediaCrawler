@@ -60,26 +60,12 @@ async def update_bilibili_video_by_user_id(video_item: Dict):
     video_id = str(video_item.get("aid"))
     save_content_item = {
         "video_id": video_id,
-        "video_type": "video",
-        "title": video_item.get("title", "")[:500],
-        "desc": video_item.get("desc", "")[:500],
-        "pubdate": 0,
         "user_id": str(video_item.get("mid")),
-        "nickname": video_item.get("author"),
-        "avatar": "",
-        "liked_count": 0,
-        "favorite_count": 0,  # 收藏
-        "coin_count": 0,  # 投币
-        "share_count": 0,  # 转发
-        "video_play_count": 0,
-        "video_danmaku_count": 0,
-        "video_comment_count": 0,
         "last_modify_ts": utils.get_current_timestamp(),
         "video_url": f"https://www.bilibili.com/video/av{video_id}",
-        "video_cover_url": video_item.get("pic", ""),
     }
     utils.logger.info(
-        f"[store.bilibili.update_bilibili_video_by_user_id] bilibili video id:{video_id}, title:{save_content_item.get('title')}")
+        f"[store.bilibili.update_bilibili_video_by_user_id] bilibili video id:{video_id}")
     await BiliStoreFactory.create_store().store_content(content_item=save_content_item)
 
 

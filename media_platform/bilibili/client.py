@@ -85,7 +85,7 @@ class BilibiliClient(AbstractApiClient):
         if isinstance(params, dict):
             final_uri = (f"{uri}?"
                          f"{urlencode(params)}")
-        utils.logger.info(f"[BilibiliClient.get] request target_url={self._host}{final_uri}, headers={self.headers}")
+        utils.logger.info(f"[BilibiliClient.get] request target_url={self._host}{final_uri}")
         return await self.request(method="GET", url=f"{self._host}{final_uri}", headers=self.headers)
 
     async def post(self, uri: str, data: dict) -> Dict:
@@ -167,19 +167,8 @@ class BilibiliClient(AbstractApiClient):
         params.update({
             "mid": user_id,
             "ps": 30,  # page_size
-            # "tid": 0,
             "pn": page_number,  # page_number
-            # "keyword": "",
-            # "order": "pubdate",
-            # "platform": "web",
-            # "web_location": "1550101",  # TODO: 未知
-            # "order_avoided": "true",
-            # "dm_img_list": "\[\]",
-            # "dm_img_str": "V2ViR0wgMS4wIChPcGVuR0wgRVMgMi4wIENocm9taXVtKQ",
-            # "dm_cover_img_str": "QU5HTEUgKEFNRCwgUmFkZW9uIDUyMCAoMHgwMDAwNjYxMSkgRGlyZWN0M0QxMSB2c181XzAgcHNfNV8wLCBEM0QxMSlHb29nbGUgSW5jLiAoQU1EKQ",
-            # "dm_img_inter": "%7B%22ds%22:\[%7B%22t%22:2,%22c%22:%22Y2xlYXJmaXggZy1zZWFyY2ggc2VhcmNoLWNvbnRhaW5lcg%22,%22p%22:\[2321,43,277\],%22s%22:\[388,850,1192\]%7D,%7B%22t%22:2,%22c%22:%22d3JhcHBlcg%22,%22p%22:\[1568,100,1086\],%22s%22:\[173,4698,4126\]%7D\],%22wh%22:\[5959,6868,99\],%22of%22:\[119,238,119\]%7D",
-            # "w_rid": "0fd04feeda7a263e3102682d1b17c03a",
-            # "wts": "1713259106",
+
         })
         response: Dict = await self.get(uri, params, enable_params_sign=True)
         count = response.get("page", {}).get("count", 0)

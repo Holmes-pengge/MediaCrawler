@@ -1,4 +1,6 @@
 # 基础配置
+from typing import List
+
 PLATFORM = "xhs"
 KEYWORDS = "python,golang"
 LOGIN_TYPE = "qrcode"  # qrcode or phone or cookie
@@ -73,7 +75,7 @@ BILI_SPECIFIED_USER_ID_LIST = [
     "57863910",
     # ........................
 ]
-
+# BILI_SPECIFIED_USER_ID_LIST: List = fetch_db()
 # 指定B站平台需要爬取的视频bvid列表
 BILI_SPECIFIED_ID_LIST = [
     "BV1d54y1g7db",

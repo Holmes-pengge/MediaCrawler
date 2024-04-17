@@ -223,7 +223,7 @@ class BilibiliCrawler(AbstractCrawler):
                     f"[BilibiliCrawler.get_video_info_task] have not fund note detail video_id:{bvid}, err: {ex}")
                 return None
 
-    async def get_video_list_by_user_id_task(self, user_id: str, semaphore: asyncio.Semaphore) -> Optional[List]:
+    async def get_video_list_by_user_id_task(self, user_id: str, semaphore: asyncio.Semaphore):
         """
         Get video info task
         :param user_id:
@@ -232,14 +232,14 @@ class BilibiliCrawler(AbstractCrawler):
         """
         async with semaphore:
             try:
-                result_list: List[Dict] = []
                 page_number: int = 0
                 while True:
                     result, has_next, page_number = await self.bili_client.get_video_list_by_user_id(
                         user_id=user_id,
                         page_number=page_number + 1
                     )
-                    result_list.append(result)
+                    yield result
+
                     if not has_next:
                         utils.logger.info(
                             f"[BilibiliCrawler.get_video_list_by_user_id_task] not next, current_page_number:{page_number}")
@@ -249,37 +249,22 @@ class BilibiliCrawler(AbstractCrawler):
                             f"[BilibiliCrawler.get_video_list_by_user_id_task] have next, current_page_number:{page_number}")
                         await asyncio.sleep(10)
                         continue
-                return result_list
             except DataFetchError as ex:
                 utils.logger.error(f"[BilibiliCrawler.get_video_list_by_user_id_task] Get video list error: {ex}")
-                return None
             except KeyError as ex:
                 utils.logger.error(
                     f"[BilibiliCrawler.get_video_list_by_user_id_task] have not found  user_id:{user_id}, err: {ex}")
-                return None
 
     async def get_video_list_by_user_id(self):
         """输入: user_id； 输出: video_id_list
         :return:
         """
         semaphore = asyncio.Semaphore(config.MAX_CONCURRENCY_NUM)
-        task_list = [
-            self.get_video_list_by_user_id_task(user_id=user_id, semaphore=semaphore) for user_id in
-            config.BILI_SPECIFIED_USER_ID_LIST
-        ]
-        result_ls = await asyncio.gather(*task_list)
-        for result in result_ls:
-            for idx, video_info in enumerate(result):
-                if video_info is not None:
-                    print("=========idx=", idx)
-                    # #  TODO: 去掉
-                    from datetime import datetime
-                    with open(f'video_info_{idx}_{datetime.now().strftime("%Y%m%d%H%M%S")}.json', 'w',
-                              encoding='utf-8') as f:
-                        json.dump(video_info, f, ensure_ascii=False, indent=2)
 
-                    for video_item in video_info['list']['vlist']:
-                        await bilibili_store.update_bilibili_video_by_user_id(video_item)
+        for user_id in config.BILI_SPECIFIED_USER_ID_LIST:
+            async for gen in self.get_video_list_by_user_id_task(user_id=user_id, semaphore=semaphore):
+                for video_item in gen['list']['vlist']:
+                    await bilibili_store.update_bilibili_video_by_user_id(video_item)
 
     async def create_bilibili_client(self, httpx_proxy: Optional[str]) -> BilibiliClient:
         """Create xhs client"""
