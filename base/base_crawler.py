@@ -6,10 +6,6 @@ from playwright.async_api import BrowserContext, BrowserType
 
 class AbstractCrawler(ABC):
     @abstractmethod
-    def init_config(self, platform: str, login_type: str, crawler_type: str, start_page: int, keyword: str):
-        pass
-
-    @abstractmethod
     async def start(self):
         pass
 
@@ -72,8 +68,4 @@ class AbstractApiClient(ABC):
 
     @abstractmethod
     async def update_cookies(self, browser_context: BrowserContext):
-        pass
-
-    @abstractmethod
-    async def pong(self):
         pass

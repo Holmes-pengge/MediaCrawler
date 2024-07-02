@@ -43,7 +43,7 @@ class BilibiliClient(AbstractApiClient):
             )
         data: Dict = response.json()
         if data.get("code") != 0:
-            raise DataFetchError(data.get("message", "unknown error"))
+            raise DataFetchError(data.get("message", "unkonw error"))
         else:
             return data.get("data", {})
 
@@ -85,7 +85,6 @@ class BilibiliClient(AbstractApiClient):
         if isinstance(params, dict):
             final_uri = (f"{uri}?"
                          f"{urlencode(params)}")
-        utils.logger.info(f"[BilibiliClient.get] request target_url={self._host}{final_uri}")
         return await self.request(method="GET", url=f"{self._host}{final_uri}", headers=self.headers)
 
     async def post(self, uri: str, data: dict) -> Dict:
@@ -102,10 +101,12 @@ class BilibiliClient(AbstractApiClient):
             check_login_uri = "/x/web-interface/nav"
             response = await self.get(check_login_uri)
             if response.get("isLogin"):
-                utils.logger.info("[BilibiliClient.pong] Use cache login state get web interface successfull!")
+                utils.logger.info(
+                    "[BilibiliClient.pong] Use cache login state get web interface successfull!")
                 ping_flag = True
         except Exception as e:
-            utils.logger.error(f"[BilibiliClient.pong] Pong bilibili failed: {e}, and try to login again...")
+            utils.logger.error(
+                f"[BilibiliClient.pong] Pong bilibili failed: {e}, and try to login again...")
             ping_flag = False
         return ping_flag
 
@@ -152,48 +153,15 @@ class BilibiliClient(AbstractApiClient):
             params.update({"bvid": bvid})
         return await self.get(uri, params, enable_params_sign=False)
 
-    async def get_video_list_by_user_id(
-            self,
-            user_id: Union[str, None] = None,
-            page_number: int = 1
-    ) -> Tuple[Dict, bool, int]:
-        """
-        :param user_id: user_id
-        :param page_number: page_number
-        :return:
-        """
-        if not user_id:
-            raise ValueError("请提供 user_id  参数")
-
-        uri = "/x/space/wbi/arc/search"
-        params = dict()
-
-        params.update({
-            "mid": user_id,
-            "ps": 30,  # page_size
-            "pn": page_number,  # page_number
-
-        })
-        response: Dict = await self.get(uri, params, enable_params_sign=True)
-        count = response.get("page", {}).get("count", 0)
-        pn = response.get("page", {}).get("pn", 1)
-        ps = response.get("page", {}).get("ps", 30)
-        if pn * ps < count:
-            has_next = True
-        else:
-            has_next = False
-        return response, has_next, pn
-
-    async def get_video_comments(
-            self,
-            video_id: str,
-            order_mode: CommentOrderType = CommentOrderType.DEFAULT,
-            next_page: int = 0
-    ) -> Dict:
+    async def get_video_comments(self,
+                                 video_id: str,
+                                 order_mode: CommentOrderType = CommentOrderType.DEFAULT,
+                                 next: int = 0
+                                 ) -> Dict:
         """get video comments
         :param video_id: 视频 ID
         :param order_mode: 排序方式
-        :param next_page: 评论页选择
+        :param next: 评论页选择
         :return:
         """
         uri = "/x/v2/reply/wbi/main"
@@ -202,17 +170,12 @@ class BilibiliClient(AbstractApiClient):
             "mode": order_mode.value,
             "type": 1,
             "ps": 20,
-            "next": next_page
+            "next": next
         }
         return await self.get(uri, post_data)
 
-    async def get_video_all_comments(
-            self,
-            video_id: str,
-            crawl_interval: float = 1.0,
-            is_fetch_sub_comments=False,
-            callback: Optional[Callable] = None
-    ):
+    async def get_video_all_comments(self, video_id: str, crawl_interval: float = 1.0, is_fetch_sub_comments=False,
+                                     callback: Optional[Callable] = None, ):
         """
         get video all comments include sub comments
         :param video_id:
@@ -231,11 +194,94 @@ class BilibiliClient(AbstractApiClient):
             comment_list: List[Dict] = comments_res.get("replies", [])
             is_end = cursor_info.get("is_end")
             next_page = cursor_info.get("next")
+            if is_fetch_sub_comments:
+                for comment in comment_list:
+                    comment_id = comment['rpid']
+                    if (comment.get("rcount", 0) > 0):
+                        {
+                            await self.get_video_all_level_two_comments(
+                                video_id, comment_id, CommentOrderType.DEFAULT, 10, crawl_interval,  callback)
+                        }
             if callback:  # 如果有回调函数，就执行回调函数
                 await callback(video_id, comment_list)
             await asyncio.sleep(crawl_interval)
             if not is_fetch_sub_comments:
                 result.extend(comment_list)
                 continue
-            # todo handle get sub comments
         return result
+
+    async def get_video_all_level_two_comments(self,
+                                               video_id: str,
+                                               level_one_comment_id: int,
+                                               order_mode: CommentOrderType,
+                                               ps: int = 10,
+                                               crawl_interval: float = 1.0,
+                                               callback: Optional[Callable] = None,
+                                               ) -> Dict:
+        """
+        get video all level two comments for a level one comment
+        :param video_id: 视频 ID
+        :param level_one_comment_id: 一级评论 ID
+        :param order_mode:
+        :param ps: 一页评论数
+        :param crawl_interval:
+        :param callback:
+        :return:
+        """
+
+        pn = 1
+        while True:
+            result = await self.get_video_level_two_comments(
+                video_id, level_one_comment_id, pn, ps, order_mode)
+            comment_list: List[Dict] = result.get("replies", [])
+            if callback:  # 如果有回调函数，就执行回调函数
+                await callback(video_id, comment_list)
+            await asyncio.sleep(crawl_interval)
+            if (int(result["page"]["count"]) <= pn * ps):
+                break
+
+            pn += 1
+
+    async def get_video_level_two_comments(self,
+                                           video_id: str,
+                                           level_one_comment_id: int,
+                                           pn: int,
+                                           ps: int,
+                                           order_mode: CommentOrderType,
+                                           ) -> Dict:
+        """get video level two comments
+        :param video_id: 视频 ID
+        :param level_one_comment_id: 一级评论 ID
+        :param order_mode: 排序方式
+
+        :return:
+        """
+        uri = "/x/v2/reply/reply"
+        post_data = {
+            "oid": video_id,
+            "mode": order_mode.value,
+            "type": 1,
+            "ps": ps,
+            "pn": pn,
+            "root": level_one_comment_id,
+        }
+        result = await self.get(uri, post_data)
+        return result
+
+    async def get_creator_videos(self, creator_id: str, pn: int, ps: int = 30, order_mode: SearchOrderType = SearchOrderType.LAST_PUBLISH) -> Dict:
+        """get all videos for a creator
+        :param creator_id: 创作者 ID
+        :param pn: 页数
+        :param ps: 一页视频数
+        :param order_mode: 排序方式
+
+        :return:
+        """
+        uri = "/x/space/wbi/arc/search"
+        post_data = {
+            "mid": creator_id,
+            "pn": pn,
+            "ps": ps,
+            "order": order_mode,
+        }
+        return await self.get(uri, post_data)

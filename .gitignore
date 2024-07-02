@@ -165,9 +165,6 @@ cython_debug/
 /temp_image/
 /browser_data/
 /data/
-/cache
 
 */.DS_Store
-demos
-output
-input
+.vscode
