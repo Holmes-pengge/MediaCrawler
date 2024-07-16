@@ -33,8 +33,8 @@ async def main():
     await cmd_arg.parse_cmd()
 
     # init db
-    if config.SAVE_DATA_OPTION == "db":
-        await db.init_db()
+    # if config.SAVE_DATA_OPTION == "db":
+    await db.init_db()
 
     crawler = CrawlerFactory.create_crawler(platform=config.PLATFORM)
     await crawler.start()

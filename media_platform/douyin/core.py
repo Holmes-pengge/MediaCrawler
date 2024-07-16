@@ -8,11 +8,12 @@ from playwright.async_api import (BrowserContext, BrowserType, Page,
                                   async_playwright)
 
 import config
+from async_db import AsyncMysqlDB
 from base.base_crawler import AbstractCrawler
 from proxy.proxy_ip_pool import IpInfoModel, create_ip_pool
 from store import douyin as douyin_store
 from tools import utils
-from var import crawler_type_var
+from var import crawler_type_var, media_crawler_db_var
 
 from .client import DOUYINClient
 from .exception import DataFetchError
@@ -31,10 +32,14 @@ class DouYinCrawler(AbstractCrawler):
     async def start(self) -> None:
         playwright_proxy_format, httpx_proxy_format = None, None
         if config.ENABLE_IP_PROXY:
-            ip_proxy_pool = await create_ip_pool(config.IP_PROXY_POOL_COUNT, enable_validate_ip=True)
-            ip_proxy_info: IpInfoModel = await ip_proxy_pool.get_proxy()
-            playwright_proxy_format, httpx_proxy_format = self.format_proxy_info(ip_proxy_info)
-
+            # ip_proxy_pool = await create_ip_pool(config.IP_PROXY_POOL_COUNT, enable_validate_ip=True)
+            # ip_proxy_info: IpInfoModel = await ip_proxy_pool.get_proxy()
+            # playwright_proxy_format, httpx_proxy_format = self.format_proxy_info(ip_proxy_info)
+            httpx_proxy_format = {
+                # 'https://': 'http://lscp1:lscp123@pr.8o87hr9e.lunaproxy.net:12233'
+                "https://": "http://127.0.0.1:10809",
+                "http://": "http://127.0.0.1:10809",
+            }
         async with async_playwright() as playwright:
             # Launch a browser context.
             chromium = playwright.chromium
@@ -92,7 +97,8 @@ class DouYinCrawler(AbstractCrawler):
                     utils.logger.info(f"[DouYinCrawler.search] search douyin keyword: {keyword}, page: {page}")
                     posts_res = await self.dy_client.search_info_by_keyword(keyword=keyword,
                                                                             offset=page * dy_limit_count - dy_limit_count,
-                                                                            publish_time=PublishTimeType(config.PUBLISH_TIME_TYPE)
+                                                                            publish_time=PublishTimeType(
+                                                                                config.PUBLISH_TIME_TYPE)
                                                                             )
                 except DataFetchError:
                     utils.logger.error(f"[DouYinCrawler.search] search douyin keyword: {keyword} failed")
@@ -177,7 +183,16 @@ class DouYinCrawler(AbstractCrawler):
         Get the information and videos of the specified creator
         """
         utils.logger.info("[DouYinCrawler.get_creators_and_videos] Begin get douyin creators")
-        for user_id in config.DY_CREATOR_ID_LIST:
+
+        if config.IS_PRODUCTION:
+            async_db_conn: AsyncMysqlDB = media_crawler_db_var.get()
+            result_row: List[Dict[str, Any]] = await async_db_conn.query("SELECT sec_uid FROM tb_douyin_user;")
+            task_ls = [item['sec_uid'] for item in result_row]
+        else:
+            task_ls = config.DY_CREATOR_ID_LIST
+        utils.logger.info(f"task length={len(task_ls)}")
+
+        for user_id in task_ls:
             creator_info: Dict = await self.dy_client.get_user_info(user_id)
             if creator_info:
                 await douyin_store.save_creator(user_id, creator=creator_info)
